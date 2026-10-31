@@ -17,6 +17,8 @@ interface NotifyInput {
   actorId?: string | null;
   postId?: string | null;
   data?: Record<string, unknown>;
+  /** Number of actions this call represents (batched AI follows/likes). */
+  count?: number;
 }
 
 /**
@@ -47,11 +49,11 @@ export async function notify(env: Env, n: NotifyInput) {
   if (groupKey) {
     const updated = await db
       .prepare(
-        `UPDATE notifications SET actor_count = actor_count + 1, actor_id = ?3, updated_at = ?4
+        `UPDATE notifications SET actor_count = actor_count + ?5, actor_id = COALESCE(?3, actor_id), updated_at = ?4
          WHERE id = (SELECT id FROM notifications WHERE recipient_id = ?1 AND group_key = ?2 AND read_at IS NULL ORDER BY updated_at DESC LIMIT 1)
          RETURNING id`,
       )
-      .bind(n.recipientId, groupKey, n.actorId ?? null, now)
+      .bind(n.recipientId, groupKey, n.actorId ?? null, now, Math.max(1, n.count ?? 1))
       .first<{ id: string }>();
     if (updated) {
       await pushTo(env, [n.recipientId], { type: "notification", profileId: n.recipientId });
@@ -60,9 +62,9 @@ export async function notify(env: Env, n: NotifyInput) {
   }
   await db
     .prepare(
-      "INSERT INTO notifications (id, recipient_id, type, actor_id, post_id, group_key, data_json, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?8)",
+      "INSERT INTO notifications (id, recipient_id, type, actor_id, post_id, group_key, data_json, actor_count, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?9, ?8, ?8)",
     )
-    .bind(newId(now), n.recipientId, n.type, n.actorId ?? null, n.postId ?? null, groupKey, JSON.stringify(n.data ?? {}), now)
+    .bind(newId(now), n.recipientId, n.type, n.actorId ?? null, n.postId ?? null, groupKey, JSON.stringify(n.data ?? {}), now, Math.max(1, n.count ?? 1))
     .run();
   await pushTo(env, [n.recipientId], { type: "notification", profileId: n.recipientId });
 }

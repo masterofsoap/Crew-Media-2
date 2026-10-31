@@ -231,3 +231,9 @@ export async function isBlockedEitherWay(db: D1Database, a: string, b: string): 
     .first();
   return !!r;
 }
+
+/**
+ * Profiles that can appear in discovery (people, businesses, AI personas) — never the million-row
+ * audience tier. Written as an index-backed UNION so queries don't scan audience rows.
+ */
+export const DISCOVERABLE_PROFILES = `(SELECT * FROM profiles WHERE kind IN ('personal','business') UNION ALL SELECT * FROM profiles WHERE kind = 'ai' AND ai_class = 'persona')`;

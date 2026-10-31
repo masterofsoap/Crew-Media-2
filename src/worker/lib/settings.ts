@@ -47,11 +47,20 @@ export const configSchema = z.object({
   growth: z.object({
     enabled: z.boolean().default(true),
     minGrowthScore: z.number().min(0).max(1).default(0.3),
-    capNewPerDay: z.number().int().min(0).max(10_000).default(4),
-    capRisingPerDay: z.number().int().min(0).max(100_000).default(25),
-    capEstablishedPerDay: z.number().int().min(0).max(1_000_000).default(120),
-    capStarPerDay: z.number().int().min(0).max(10_000_000).default(400),
-    audienceTarget: z.number().int().min(0).max(2_000_000).default(0),
+    /** Flat daily allowance for brand-new profiles (< 100 followers). */
+    newPerDay: z.number().int().min(0).max(10_000).default(6),
+    /** Daily growth as a fraction of current followers, by stage, before score scaling. */
+    risingRate: z.number().min(0).max(0.2).default(0.02), // 100 – 5k
+    establishedRate: z.number().min(0).max(0.2).default(0.015), // 5k – 100k
+    starRate: z.number().min(0).max(0.2).default(0.01), // 100k – 1M
+    megaRate: z.number().min(0).max(0.2).default(0.002), // > 1M
+    /** Max AI-sourced followers a single profile can accumulate. */
+    aiFollowerCeiling: z.number().int().min(0).max(200_000_000).default(1_000_000),
+    /** Upper bound for the audience pool; it only grows as real growth needs it. */
+    audienceTarget: z.number().int().min(0).max(5_000_000).default(1_100_000),
+    /** Audience likes per post ≈ followers × (base + quality² × bonus), delivered over ~2 days. */
+    likeRateBase: z.number().min(0).max(0.5).default(0.004),
+    likeRateQualityBonus: z.number().min(0).max(0.5).default(0.03),
   }).default({}),
   limits: z.object({
     postsPerHour: z.number().int().min(1).max(500).default(30),

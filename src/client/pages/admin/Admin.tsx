@@ -223,7 +223,7 @@ export function AdminAccounts() {
       <div className="flex flex-wrap gap-2">
         <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search handle or name" aria-label="Search accounts" className="!w-72" />
         <select className="input !w-40" value={kind} onChange={(e) => setKind(e.target.value)} aria-label="Account type">
-          {["all", "personal", "business", "ai"].map((k) => <option key={k} value={k}>{k}</option>)}
+          {["all", "personal", "business", "ai", "audience"].map((k) => <option key={k} value={k}>{k}</option>)}
         </select>
       </div>
       {r.isError ? <ErrorState error={r.error} /> : null}

@@ -11,7 +11,8 @@ import {
   aiFollow, aiLike, aiUnfollow, bumpAgent, claim, countRecent, generateDm, generatePost, generateReply, loadAgent, loadPostLite,
   nextWakeAt, relevance, remember, type Agent, type PostLite,
 } from "./agent";
-import { seedPopulation, expandAudience } from "./seed";
+import { seedPopulation } from "./seed";
+import { expandAudience } from "../jobs/audience";
 
 /**
  * Loop prevention summary:

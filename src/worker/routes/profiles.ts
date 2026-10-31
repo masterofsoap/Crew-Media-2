@@ -8,7 +8,7 @@ import type { AffiliationView, FeedItem, ProfileDetail, ProfileSummary } from ".
 import { actor, auth } from "../lib/session";
 import { bad, body, decodeCursor, encodeCursor, forbidden, notFound, query } from "../lib/http";
 import { assertHandleAvailable, createProfileStatements, sessionInfo } from "../lib/profiles";
-import { getSummaries, toFeedItems, visibleAuthorSql, PROFILE_SUMMARY_COLS, toSummary, type ProfileSummaryRow } from "../lib/views";
+import { getSummaries, toFeedItems, visibleAuthorSql, PROFILE_SUMMARY_COLS, DISCOVERABLE_PROFILES, toSummary, type ProfileSummaryRow } from "../lib/views";
 import { visibilityMultiplier } from "../lib/settings";
 import { hit } from "../lib/ratelimit";
 
@@ -83,8 +83,8 @@ app.get("/suggestions", async (c) => {
   const a = auth(c);
   const { results } = await c.env.DB.prepare(
     `SELECT ${PROFILE_SUMMARY_COLS}, p.bio, p.visibility, COALESCE(s.growth_score, 0) AS gs, p.follower_count
-     FROM profiles p LEFT JOIN profile_scores s ON s.profile_id = p.id
-     WHERE p.id <> ?1 AND (p.kind <> 'ai' OR p.ai_class = 'persona') AND ${visibleAuthorSql("p")}
+     FROM ${DISCOVERABLE_PROFILES} p LEFT JOIN profile_scores s ON s.profile_id = p.id
+     WHERE p.id <> ?1 AND ${visibleAuthorSql("p")}
        AND NOT EXISTS (SELECT 1 FROM follows f WHERE f.follower_id = ?1 AND f.followee_id = p.id)
      ORDER BY (COALESCE(s.growth_score, 0) + 0.15) * (0.25 + 1.5 * p.visibility / 100.0) * (0.6 + abs(random() % 1000) / 2500.0) DESC
      LIMIT 8`,

@@ -1,12 +1,11 @@
-import { getConfig, getFlag } from "../lib/settings";
+import { getConfig, getFlag, setFlag } from "../lib/settings";
 import { opsLog } from "../lib/log";
-import { dayKey } from "../lib/ids";
 import { awardMilestones } from "../lib/milestones";
 import { MILESTONES } from "../../shared/constants";
 import { enqueue } from "./queue";
 import { sweepExpiredMedia } from "./media-cleanup";
 import { computeTrends } from "./trends";
-import { attrition, distributeGrowth, recomputeScores } from "./growth";
+import { attrition, audienceEngagement, distributeGrowth, recomputeScores } from "./growth";
 import { budgetState } from "../ai/provider";
 
 export type MaintenanceTask = "media-cleanup" | "reconcile" | "trends" | "growth" | "ai-tick" | "prune";
@@ -50,7 +49,14 @@ export async function aiTick(env: Env) {
 export async function reconcile(env: Env) {
   const db = env.DB;
   const { results } = await db
-    .prepare("SELECT id FROM profiles WHERE counts_dirty = 1 OR follower_count >= ?1 OR id IN (SELECT id FROM profiles ORDER BY random() LIMIT 100) LIMIT 300")
+    // Only human/business/persona profiles (index-backed); audience rows are never sampled.
+    .prepare(
+      `SELECT id FROM (
+         SELECT id FROM profiles WHERE kind IN ('personal','business') AND (counts_dirty = 1 OR follower_count >= ?1)
+         UNION SELECT id FROM (SELECT id FROM profiles WHERE kind IN ('personal','business') ORDER BY random() LIMIT 60)
+         UNION SELECT id FROM (SELECT id FROM profiles WHERE kind = 'ai' AND ai_class = 'persona' ORDER BY random() LIMIT 20)
+       ) LIMIT 150`,
+    )
     .bind(MILESTONES[0]!.threshold)
     .all<{ id: string }>();
   let fixed = 0;
@@ -104,12 +110,12 @@ export async function prune(env: Env) {
       `DELETE FROM ai_memories WHERE id IN (SELECT id FROM (SELECT id, ROW_NUMBER() OVER (PARTITION BY agent_id ORDER BY weight DESC, COALESCE(last_used_at, created_at) DESC) AS rn FROM ai_memories) WHERE rn > 80)`,
     ),
   ]);
-  // Grow the audience pool toward the configured target in bounded steps.
-  const cfg = await getConfig(db);
-  const audience = (await db.prepare("SELECT COUNT(*) AS n FROM profiles WHERE kind = 'ai' AND ai_class = 'audience'").first<{ n: number }>())?.n ?? 0;
-  const gap = cfg.growth.audienceTarget - audience;
-  if (gap > 0) await enqueue(env, "ai", { kind: "population.expand", count: Math.min(gap, 5000), key: `expand:auto:${dayKey()}` });
-  return { pruned: true, audienceGap: Math.max(0, gap) };
+  // Churn counter decays over ~30 days; the audience pool grows lazily in distributeGrowth.
+  await db.prepare("UPDATE profile_scores SET churn_30d = churn_30d * 0.967 WHERE churn_30d > 0").run();
+  // Re-derive the cached audience size (cheap: MAX over a unique index).
+  const r = await db.prepare("SELECT COALESCE(MAX(audience_slot), -1) + 1 AS n FROM profiles WHERE audience_slot IS NOT NULL").first<{ n: number }>();
+  await setFlag(db, "audience_count", r?.n ?? 0);
+  return { pruned: true, audience: r?.n ?? 0 };
 }
 
 export async function runMaintenance(env: Env, task: MaintenanceTask): Promise<unknown> {
@@ -123,8 +129,9 @@ export async function runMaintenance(env: Env, task: MaintenanceTask): Promise<u
     case "growth": {
       const scored = await recomputeScores(env);
       const dist = await distributeGrowth(env);
+      const engagement = await audienceEngagement(env);
       const removed = await attrition(env);
-      return { scored, ...dist, attrition: removed };
+      return { scored, ...dist, engagement, attrition: removed };
     }
     case "ai-tick":
       return aiTick(env);

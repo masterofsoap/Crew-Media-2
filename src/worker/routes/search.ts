@@ -4,7 +4,7 @@ import type { AppEnv } from "../env";
 import { TOPICS } from "../../shared/constants";
 import { auth } from "../lib/session";
 import { decodeCursor, encodeCursor, query } from "../lib/http";
-import { PROFILE_SUMMARY_COLS, toSummary, toFeedItems, visibleAuthorSql, type ProfileSummaryRow } from "../lib/views";
+import { DISCOVERABLE_PROFILES, PROFILE_SUMMARY_COLS, toSummary, toFeedItems, visibleAuthorSql, type ProfileSummaryRow } from "../lib/views";
 
 const app = new Hono<AppEnv>();
 
@@ -51,7 +51,7 @@ app.get("/", async (c) => {
     const limit = type === "top" ? 5 : 25;
     const { results } = await db
       .prepare(
-        `SELECT ${PROFILE_SUMMARY_COLS}, p.bio FROM profiles p
+        `SELECT ${PROFILE_SUMMARY_COLS}, p.bio FROM ${DISCOVERABLE_PROFILES} p
          WHERE (p.handle LIKE ?2 ESCAPE '!' OR p.display_name LIKE ?2 ESCAPE '!' OR p.bio LIKE ?2 ESCAPE '!') ${kindFilter}
            AND p.status = 'active' AND NOT EXISTS (SELECT 1 FROM blocks b WHERE b.blocker_id = p.id AND b.blocked_id = ?1)
          ORDER BY (p.handle = ?3) DESC, (p.handle LIKE ?4 ESCAPE '!') DESC, p.follower_count * (0.25 + 1.5 * p.visibility / 100.0) DESC

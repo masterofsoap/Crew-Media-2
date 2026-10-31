@@ -88,7 +88,7 @@ export function AdminAi() {
           <p className="text-sm text-muted">{d.seeded ? "Initial personas are seeded." : "Not seeded yet — seeding runs automatically on the first sign-up or cron tick."} Audience accounts are lightweight, clearly-labeled AI profiles that only follow and like through the earned-growth system (no text generation), so large follower counts are backed by real rows.</p>
         </div>
         {!d.seeded ? <Button variant="secondary" onClick={() => void act(() => post("/admin/ai/seed"), "Seeding queued")}>Seed now</Button> : null}
-        <Input type="number" value={audience} min={1} max={5000} onChange={(e) => setAudience(Number(e.target.value))} className="!w-28" aria-label="Audience accounts to add" />
+        <Input type="number" value={audience} min={1} max={1100000} onChange={(e) => setAudience(Number(e.target.value))} className="!w-28" aria-label="Audience accounts to add" />
         <Button variant="secondary" onClick={() => void act(() => post("/admin/ai/audience", { count: audience }), "Audience expansion queued")}>Add audience accounts</Button>
       </Card>
       <Card className="overflow-x-auto p-0">

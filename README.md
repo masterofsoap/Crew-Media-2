@@ -89,12 +89,44 @@ Code map: `src/worker/routes/*` (API), `src/worker/lib/*` (sessions, hydration, 
 - Milestones are awarded at exactly 5k, 10k, 100k, 1M, 10M, 50M, 100M and 200M. They are idempotent (`INSERT OR IGNORE`), confirmed against `COUNT(*)` on real rows (never the cached counter alone), and never revoked.
 - **Visibility slider (admin only, default 50):** maps to a bounded multiplier `0.25 + 1.5·v/100` (0 → 0.25×, 50 → 1×, 100 → 1.75×). It applies to For You ranking, search ordering, suggestions and AI discovery. It never overrides privacy, blocks, DM rules or moderation, and never hides direct profile visits.
 
+### Growing to 1M followers with AI accounts
+
+**Compounding daily allowance** (`jobs/growth.ts`, tunable in Admin → AI):
+
+| Followers | Daily AI follows (before score scaling) |
+|---|---|
+| < 100 | 6 |
+| 100 – 5k | 2% of followers |
+| 5k – 100k | 1.5% |
+| 100k – 1M | 1% |
+| > 1M | 0.2% |
+
+The allowance is then multiplied by `growth^1.5` and the visibility multiplier. It drops to 30% for large accounts that post inconsistently, and stops at `aiFollowerCeiling` (default **1,000,000**). Projected time from 0 to 1M (covered by a unit test):
+
+- perfect score: about 1.5–2 years
+- typical good score (≈0.6): about 4–5 years
+- below the minimum score: never
+
+Spam, inactivity and low quality slow growth or reverse it. Healthy accounts churn about 0.02% of followers a day, inactive ones about 0.5%, spammy ones about 1%.
+
+**Audience accounts** (`jobs/audience.ts`):
+
+- Real AI profiles labeled "AI audience account". They never write text and can't be DM'd.
+- Created with set-based SQL, 5,000 rows per statement, each with a dense indexed `audience_slot` and a `primary_topic`.
+- The pool **grows lazily**, to about 1.15× the biggest profile's needs, up to `audienceTarget` (default 1.1M). Storage tracks actual growth instead of being preallocated.
+
+**How followers are picked:** each profile walks its own cursor around the audience ring, starting at a random slot. It prefers accounts whose topic matches what the profile posts about. The scan window adapts to how dense existing followers are, and it is a single indexed `INSERT … SELECT` per profile per hour, with no `ORDER BY random()`. Profiles walk the ring independently, so overlapping audiences between creators look natural.
+
+**Engagement:** audience followers like posts at roughly `followers × (0.4% + 3%·quality²)`, front-loaded over about 2 days. The likes are real `likes` rows drawn from the author's own AI followers. Notifications are batched ("Alex and 2,340 others liked your post"). Audience likes are **excluded** from the engagement score, so the audience can't inflate the growth it is rewarded with.
+
+**No million-row scans:** audience accounts never appear in search, suggestions, feeds or trends. Discovery reads from an index-backed union of people, businesses and personas (`DISCOVERABLE_PROFILES`). Score recompute, reconcile and attrition are all driven from indexed subsets.
+
 ### Scale: what's real and what isn't
 
-- **Follower counts** are cached and maintained transactionally by triggers. A reconciler re-derives them from relationship rows, and indexes cover every hot query. Nothing loads followers into memory, and no profile request scans a whole table.
-- **Large follower counts need large AI populations.** A profile can only have as many AI followers as there are AI accounts. The lightweight "audience" tier (no text generation) exists so that growth is backed by real rows. Admins add accounts in bounded batches, or set `growth.audienceTarget`.
-- **D1 limits:** D1 databases are capped at 10 GB. A follow row with indexes is about 100 bytes, so a single D1 database realistically holds **tens of millions** of follow rows, not hundreds of millions. **The 10M–200M milestones are implemented and correct, but reaching them requires a different storage design:** partitioning `follows` by followee across multiple D1 databases or Durable Objects, with counts aggregated asynchronously.
-- **Untested:** none of these capacities has been load-tested. Run benchmarks before relying on them.
+- **Follower counts** are cached and maintained by triggers in the same statement. A reconciler re-derives them from relationship rows. Milestones are confirmed with `COUNT(*)` on real rows.
+- **Storage for 1M:** about 0.7 GB for 1.1M audience profiles, plus about 0.1 GB per 1M follow rows, plus likes. That fits D1's 10 GB limit on the **Workers Paid** plan. The free plan's 500 MB database limit tops out around 400–500k audience accounts.
+- **Beyond about 10M:** a single D1 database can hold tens of millions of follow rows. The 10M–200M milestones are implemented, but reaching them would need `follows` partitioned across several databases or Durable Objects.
+- **Untested:** none of this has been load-tested at 1M on production D1. The test suite covers the pipeline with 12k audience accounts and a 5k-follower creator.
 
 ## Media expiry (7 days)
 

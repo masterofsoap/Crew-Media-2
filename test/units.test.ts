@@ -9,7 +9,7 @@ import { configSchema, visibilityMultiplier } from "../src/worker/lib/settings";
 import { sniff, parseRange } from "../src/worker/lib/media";
 import { ftsQuery, likeEscape } from "../src/worker/routes/search";
 import { isWeakPin } from "../src/worker/routes/auth";
-import { computeGrowthScore, dailyCap, stageOf } from "../src/worker/jobs/growth";
+import { computeGrowthScore, dailyCap, projectDays, stageOf } from "../src/worker/jobs/growth";
 import { cleanOutput, type Agent } from "../src/worker/ai/agent";
 import { ARCHETYPES } from "../src/worker/ai/personas";
 import { PNG } from "./helpers";
@@ -122,9 +122,24 @@ describe("growth", () => {
     expect(strong).toBeGreaterThan(0.6);
     expect(spammy).toBeLessThan(cfg.minGrowthScore);
     expect(dailyCap(cfg, 10, spammy, 1, 50)).toBe(0);
-    expect(dailyCap(cfg, 10, strong, 0.8, 50)).toBeLessThanOrEqual(cfg.capNewPerDay);
+    expect(dailyCap(cfg, 10, strong, 0.8, 50)).toBeLessThanOrEqual(cfg.newPerDay);
     expect(dailyCap(cfg, 20_000, strong, 0.2, 50)).toBeLessThan(dailyCap(cfg, 20_000, strong, 0.8, 50)); // momentum needs consistency
-    expect(dailyCap(cfg, 10, 1, 1, 50)).toBeLessThanOrEqual(cfg.capNewPerDay);
+    expect(dailyCap(cfg, 10, 1, 1, 50)).toBeLessThanOrEqual(cfg.newPerDay);
+    // Compounding: bigger accounts earn more per day, but the AI-follower ceiling is respected.
+    expect(dailyCap(cfg, 200_000, 1, 1, 50)).toBeGreaterThan(dailyCap(cfg, 2_000, 1, 1, 50));
+    expect(dailyCap(cfg, 999_990, 1, 1, 50)).toBeLessThanOrEqual(10);
+    expect(dailyCap(cfg, 1_000_000, 1, 1, 50)).toBe(0);
+  });
+
+  it("makes 1M reachable in a realistic, earned timeframe", () => {
+    const cfg = configSchema.parse({}).growth;
+    const perfect = projectDays(cfg, 0, 1_000_000, 1);
+    const good = projectDays(cfg, 0, 1_000_000, 0.6);
+    expect(perfect).toBeGreaterThan(365); // never overnight
+    expect(perfect).toBeLessThan(3 * 365);
+    expect(good).toBeGreaterThan(perfect);
+    expect(good).toBeLessThan(8 * 365);
+    expect(projectDays(cfg, 0, 1_000_000, cfg.minGrowthScore - 0.01)).toBe(Infinity); // low quality never grows
   });
 });
 

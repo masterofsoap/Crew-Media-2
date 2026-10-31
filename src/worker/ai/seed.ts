@@ -4,7 +4,7 @@ import { createProfileStatements } from "../lib/profiles";
 import { opsLog } from "../lib/log";
 import { newId } from "../lib/ids";
 import { createPost } from "../routes/posts";
-import { ARCHETYPES, ACTIVITY_LEVELS, AUDIENCE_FIRST, AUDIENCE_LAST, type ActivityLevel, type Archetype } from "./personas";
+import { ARCHETYPES, AUDIENCE_FIRST, AUDIENCE_LAST, type ActivityLevel, type Archetype } from "./personas";
 import { enqueue } from "../jobs/queue";
 
 const pick = <T>(arr: readonly T[]) => arr[Math.floor(Math.random() * arr.length)]!;
@@ -145,44 +145,3 @@ export async function seedPopulation(env: Env) {
   await opsLog(db, "warn", "ai.seed", "AI population seeded", { personas: created.length, posts: postIds.length });
 }
 
-/**
- * Lightweight audience accounts: real AI profiles (clearly labeled) that never generate text.
- * They participate only through the earned-growth system (follows/likes). Created in bounded
- * batches so follower growth toward large milestones is backed by real relationship rows.
- */
-export async function expandAudience(env: Env, count: number) {
-  const db = env.DB;
-  const batch = Math.min(count, 500);
-  let made = 0;
-  for (let i = 0; i < batch; i += 40) {
-    const stmts: D1PreparedStatement[] = [];
-    const now = Date.now();
-    for (let j = 0; j < Math.min(40, batch - i); j++) {
-      const first = pick(AUDIENCE_FIRST);
-      const last = pick(AUDIENCE_LAST);
-      const suffix = newId().slice(-6);
-      const handle = `${first}${last}`.toLowerCase().slice(0, 13) + suffix;
-      const arch = pick(ARCHETYPES);
-      const interests = shuffle([...arch.interests]).slice(0, 2);
-      const p = createProfileStatements(db, {
-        identityId: null, kind: "ai", aiClass: "audience", handle, handleDisplay: handle, displayName: `${first} ${last}`,
-        bio: "AI audience account (follows and likes only).", interests, createdAt: now,
-      });
-      stmts.push(
-        ...p.stmts,
-        db.prepare(
-          "INSERT INTO ai_agents (profile_id, archetype, personality_json, interests, keywords, activity_level, chattiness, selectivity, next_wake_at, created_at) VALUES (?1, 'audience', '{}', ?2, '', ?3, 0, ?4, ?5, ?6)",
-        ).bind(p.id, interests.join(","), pick(ACTIVITY_LEVELS), Math.random(), Number.MAX_SAFE_INTEGER, now),
-      );
-    }
-    try {
-      await db.batch(stmts);
-      made += stmts.length / 3;
-    } catch (e) {
-      await opsLog(db, "warn", "ai.population", "audience batch failed (handle collision?)", { error: String(e).slice(0, 200) });
-    }
-  }
-  if (count > batch) await enqueue(env, "ai", { kind: "population.expand", count: count - batch, key: `expand:${Date.now()}:${count - batch}` }, 5);
-  await opsLog(db, "info", "ai.population", "audience expanded", { made });
-  return made;
-}

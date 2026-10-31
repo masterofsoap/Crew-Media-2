@@ -114,7 +114,7 @@ app.get("/dashboard", async (c) => {
                 (SELECT COUNT(*) FROM profiles WHERE kind = 'personal') AS personal,
                 (SELECT COUNT(*) FROM profiles WHERE kind = 'business') AS business,
                 (SELECT COUNT(*) FROM profiles WHERE kind = 'ai' AND ai_class = 'persona') AS ai_personas,
-                (SELECT COUNT(*) FROM profiles WHERE kind = 'ai' AND ai_class = 'audience') AS ai_audience,
+                (SELECT COALESCE(MAX(audience_slot), -1) + 1 FROM profiles WHERE audience_slot IS NOT NULL) AS ai_audience,
                 (SELECT COUNT(*) FROM ai_agents a JOIN profiles p ON p.id = a.profile_id WHERE a.enabled = 1 AND p.ai_class = 'persona') AS ai_enabled,
                 (SELECT COUNT(*) FROM ai_agents WHERE last_active_at > ?1) AS ai_active_24h,
                 (SELECT COUNT(*) FROM posts WHERE created_at > ?1) AS posts_24h,
@@ -164,13 +164,13 @@ app.get("/dashboard", async (c) => {
 
 app.get("/accounts", async (c) => {
   need(c, "moderator", false);
-  const { q, kind, cursor } = query(c, z.object({ q: z.string().trim().max(60).default(""), kind: z.enum(["all", "personal", "business", "ai"]).default("all"), cursor: z.string().max(100).optional() }));
+  const { q, kind, cursor } = query(c, z.object({ q: z.string().trim().max(60).default(""), kind: z.enum(["all", "personal", "business", "ai", "audience"]).default("all"), cursor: z.string().max(100).optional() }));
   const off = decodeCursor<{ off: number }>(cursor)?.off ?? 0;
   const limit = 30;
   const { results } = await c.env.DB
     .prepare(
       `SELECT ${PROFILE_SUMMARY_COLS}, p.status, p.visibility, p.follower_count, p.created_at FROM profiles p
-       WHERE (?1 = '' OR p.handle LIKE ?2 ESCAPE '!' OR p.display_name LIKE ?2 ESCAPE '!') AND (?3 = 'all' OR p.kind = ?3)
+       WHERE (?1 = '' OR p.handle LIKE ?2 ESCAPE '!' OR p.display_name LIKE ?2 ESCAPE '!') AND ((?3 = 'audience' AND p.ai_class = 'audience') OR (?3 <> 'audience' AND p.ai_class IS NOT 'audience' AND (?3 = 'all' OR p.kind = ?3)))
        ORDER BY p.created_at DESC LIMIT ?4 OFFSET ?5`,
     )
     .bind(q, `%${likeEscape(q)}%`, kind, limit, off)
@@ -391,7 +391,7 @@ app.post("/ai/seed", async (c) => {
 
 app.post("/ai/audience", async (c) => {
   const a = need(c, "admin");
-  const { count } = await body(c, z.object({ count: z.number().int().min(1).max(5000) }));
+  const { count } = await body(c, z.object({ count: z.number().int().min(1).max(1_100_000) }));
   const sent = await enqueue(c.env, "ai", { kind: "population.expand", count, key: `expand:${Date.now()}` });
   await audit(c.env, a, "ai_audience_expand", "settings", "ai", null, { count });
   return c.json({ queued: sent });

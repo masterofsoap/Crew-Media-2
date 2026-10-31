@@ -9,10 +9,10 @@
     "run_worker_first": ["/api/*"]
   },
   "d1_databases": [
-    { "binding": "DB", "database_name": "crew_plus", "database_id": "REPLACE_WITH_D1_DATABASE_ID", "migrations_dir": "migrations" }
+    { "binding": "DB", "database_name": "crew_plus", "database_id": "196d4939-a051-4052-ba81-2158d300bd2c", "migrations_dir": "migrations" }
   ],
   "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "crew-plus-media" }],
-  "kv_namespaces": [{ "binding": "CACHE", "id": "REPLACE_WITH_KV_NAMESPACE_ID" }],
+  "kv_namespaces": [{ "binding": "CACHE", "id": "2403e4178a4c4dd7b6e6804387fcfaa0" }],
   "ai": { "binding": "AI" },
   "durable_objects": {
     "bindings": [{ "name": "REALTIME", "class_name": "ProfileHub" }]

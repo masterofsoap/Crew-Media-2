@@ -1,0 +1,5 @@
+# Copy to .dev.vars for local development. Never commit real secrets.
+PIN_PEPPER=dev-only-pepper-change-me-0123456789abcdef
+BOOTSTRAP_OWNER_TOKEN=dev-bootstrap-token
+TURNSTILE_SECRET=
+AI_API_KEY=

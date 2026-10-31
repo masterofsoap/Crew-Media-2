@@ -9,10 +9,10 @@
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "test": "vitest run",
-    "db:migrate:local": "wrangler d1 migrations apply crew_plus --local",
-    "db:migrate:remote": "wrangler d1 migrations apply crew_plus --remote",
-    "cf-typegen": "wrangler types src/worker/worker-configuration.d.ts",
-    "deploy": "npm run build && wrangler deploy"
+    "db:migrate:local": "wrangler d1 migrations apply crew_plus --local -c wrangler.worker.jsonc",
+    "db:migrate:remote": "wrangler d1 migrations apply crew_plus --remote -c wrangler.worker.jsonc",
+    "cf-typegen": "wrangler types src/worker/worker-configuration.d.ts -c wrangler.worker.jsonc",
+    "deploy": "npm run build && wrangler deploy -c dist/crew_plus/wrangler.json"
   },
   "dependencies": {
     "@fontsource/cinzel": "^5.3.0",

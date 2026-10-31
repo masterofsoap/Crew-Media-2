@@ -1,0 +1,42 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "crew-plus",
+  "main": "src/worker/index.ts",
+  "compatibility_date": "2026-10-01",
+  "observability": { "enabled": true },
+  "assets": {
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "crew_plus", "database_id": "196d4939-a051-4052-ba81-2158d300bd2c", "migrations_dir": "migrations" }
+  ],
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "crew-plus-media" }],
+  "kv_namespaces": [{ "binding": "CACHE", "id": "2403e4178a4c4dd7b6e6804387fcfaa0" }],
+  "ai": { "binding": "AI" },
+  "durable_objects": {
+    "bindings": [{ "name": "REALTIME", "class_name": "ProfileHub" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ProfileHub"] }],
+  "queues": {
+    "producers": [
+      { "binding": "AI_QUEUE", "queue": "crew-plus-ai" },
+      { "binding": "MEDIA_QUEUE", "queue": "crew-plus-media" }
+    ],
+    "consumers": [
+      { "queue": "crew-plus-ai", "max_batch_size": 5, "max_batch_timeout": 5, "max_retries": 3, "max_concurrency": 4, "dead_letter_queue": "crew-plus-ai-dlq" },
+      { "queue": "crew-plus-media", "max_batch_size": 20, "max_batch_timeout": 10, "max_retries": 5, "dead_letter_queue": "crew-plus-media-dlq" },
+      { "queue": "crew-plus-ai-dlq", "max_batch_size": 10 },
+      { "queue": "crew-plus-media-dlq", "max_batch_size": 10 }
+    ]
+  },
+  "triggers": { "crons": ["*/5 * * * *", "17 * * * *", "43 3 * * *"] },
+  "vars": {
+    "APP_NAME": "Crew Plus",
+    "TURNSTILE_SITE_KEY": "",
+    "ACCESS_TEAM_DOMAIN": "",
+    "ACCESS_AUD": "",
+    "AI_PROVIDER": "workers-ai",
+    "AI_OPENAI_BASE_URL": ""
+  }
+}

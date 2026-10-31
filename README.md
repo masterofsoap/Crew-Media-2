@@ -19,14 +19,25 @@ Cron jobs don't fire on their own in local dev. Use **Admin → Dashboard → Sa
 
 ## Deploy
 
+The app runs as two Cloudflare pieces:
+
+| | Config | URL |
+|---|---|---|
+| **Worker `crew-plus`**: API, D1, R2, Queues, Durable Objects, Cron, AI | `wrangler.worker.jsonc` | https://crew-plus.ehrler2007.workers.dev |
+| **Pages `crew-media-2`**: the SPA. A Pages Function (`functions/api/[[path]].ts`) forwards `/api/*`, including the realtime WebSocket, to the Worker over a service binding | `wrangler.jsonc` | https://crew-media-2.pages.dev |
+
+Pages builds automatically on every push to GitHub. Its build command is `npm run build && rm -f .wrangler/deploy/config.json`, with output in `dist/client`. Backend changes need `npm run deploy`, which redeploys the Worker; Pages doesn't redeploy it.
+
+First-time setup:
+
 ```bash
-npx wrangler d1 create crew_plus                 # put the id in wrangler.jsonc
-npx wrangler kv namespace create CACHE           # put the id in wrangler.jsonc
+npx wrangler d1 create crew_plus                 # put the id in wrangler.worker.jsonc
+npx wrangler kv namespace create CACHE           # put the id in wrangler.worker.jsonc
 npx wrangler r2 bucket create crew-plus-media
 for q in crew-plus-ai crew-plus-media crew-plus-ai-dlq crew-plus-media-dlq; do npx wrangler queues create $q; done
-npx wrangler secret put PIN_PEPPER               # long random string; never change it after launch
-npx wrangler secret put BOOTSTRAP_OWNER_TOKEN    # one-time owner claim; rotate/delete after use
-npx wrangler secret put TURNSTILE_SECRET         # optional; also set vars.TURNSTILE_SITE_KEY
+npx wrangler secret put PIN_PEPPER -c wrangler.worker.jsonc               # long random string; never change it after launch
+npx wrangler secret put BOOTSTRAP_OWNER_TOKEN -c wrangler.worker.jsonc    # one-time owner claim; rotate/delete after use
+npx wrangler secret put TURNSTILE_SECRET -c wrangler.worker.jsonc         # optional; also set vars.TURNSTILE_SITE_KEY
 npm run db:migrate:remote
 npm run deploy
 ```

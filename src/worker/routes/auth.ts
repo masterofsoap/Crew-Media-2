@@ -23,6 +23,12 @@ export function isWeakPin(pin: string): boolean {
   const asc = "01234567890123456789";
   const desc = "98765432109876543210";
   if (asc.includes(pin) || desc.includes(pin)) return true;
+  if (pin.length === 4) {
+    if (/^(\d\d)\1$/.test(pin)) return true; // 1212, 6969
+    if (/^(\d)\1(\d)\2$/.test(pin)) return true; // 1122
+    if (/^(19\d\d|20[0-2]\d)$/.test(pin)) return true; // years: birthdays/anniversaries are guessed first
+    if (["2580", "0852", "1004", "0007", "1357", "2468", "8520", "5683"].includes(pin)) return true;
+  }
   const common = ["123123", "121212", "112233", "696969", "131313", "123321", "654321", "202020", "101010"];
   return common.includes(pin);
 }

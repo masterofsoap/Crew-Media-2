@@ -66,7 +66,7 @@ export function ProfileSwitcher({ onDone, compact = false }: { onDone?: () => vo
           </button>
         </>
       ) : null}
-      <button role="menuitem" className="flex w-full items-center gap-3 px-4 py-2.5 hover:bg-surface2" onClick={async () => (onDone?.(), await signOut(), nav("/signin"))}>
+      <button role="menuitem" className="flex w-full items-center gap-3 px-4 py-2.5 hover:bg-surface2" onClick={async () => (onDone?.(), await signOut(), nav("/"))}>
         <Icon name="logout" size={18} /> Sign out
       </button>
     </div>

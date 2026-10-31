@@ -128,3 +128,13 @@ describe("authentication & profiles", () => {
     expect(r.status).toBe(403);
   });
 });
+
+describe("4-digit PINs", () => {
+  it("accepts a non-guessable 4-digit PIN, rejects common ones and anything shorter", async () => {
+    const handle = uniq("four");
+    expect((await new Client().register(handle, "4827")).status).toBe(201);
+    expect((await new Client().post("/auth/login", { handle, pin: "4827" })).status).toBe(200);
+    expect((await new Client().register(uniq("fourw"), "1990")).json.code).toBe("WEAK_PIN");
+    expect((await new Client().register(uniq("three"), "482")).status).toBe(400);
+  });
+});

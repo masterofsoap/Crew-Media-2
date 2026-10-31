@@ -10,18 +10,17 @@ import { Icon } from "./Icon";
 import { ProfileSwitcher } from "./ProfileSwitcher";
 import { NameLine, KindChip } from "./RichText";
 import { Composer } from "./Composer";
+import { LogoMark } from "./Logo";
 import { Dialog, Skeleton } from "./ui";
 import { FollowButton } from "./FollowButton";
 
 function Logo({ className = "" }: { className?: string }) {
   return (
-    <Link to="/home" className={`flex items-center gap-2 ${className}`} aria-label="Crew Plus home">
-      <svg width="34" height="34" viewBox="0 0 32 32" aria-hidden="true">
-        <rect width="32" height="32" rx="9" fill="var(--c-surface2)" />
-        <path d="M21.5 10.5a8 8 0 1 0 0 11" fill="none" stroke="var(--c-accent)" strokeWidth="3.2" strokeLinecap="round" />
-        <path d="M22 13v6M19 16h6" stroke="var(--c-accent2)" strokeWidth="2.6" strokeLinecap="round" />
-      </svg>
-      <span className="heading hidden text-xl font-extrabold xl:inline">Crew Plus</span>
+    <Link to="/home" className={`flex items-center gap-2.5 ${className}`} aria-label="Crew Plus home">
+      <LogoMark size={36} />
+      <span className="heading hidden text-xl font-extrabold tracking-tight xl:inline">
+        Crew<span className="ml-1 bg-gradient-to-r from-[var(--c-accent)] to-[var(--c-accent2)] bg-clip-text text-transparent">Plus</span>
+      </span>
     </Link>
   );
 }

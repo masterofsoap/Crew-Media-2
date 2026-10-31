@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { BIO_MAX_CHARS, DISPLAY_NAME_MAX, PIN_MAX, TOPICS } from "../../shared/constants";
+import { BIO_MAX_CHARS, DISPLAY_NAME_MAX, PIN_MAX, PIN_MIN, TOPICS } from "../../shared/constants";
 import { isValidHandle } from "../../shared/text";
 import type { ProfileSummary, SessionInfo } from "../../shared/types";
 import { del, errorMessage, get, patch, post } from "../lib/api";
@@ -208,7 +208,7 @@ export function Settings() {
           >
             <Field label="Current PIN" id="cp"><Input id="cp" type="password" inputMode="numeric" autoComplete="current-password" maxLength={PIN_MAX} value={pins.current} onChange={(e) => setPins((p) => ({ ...p, current: e.target.value.replace(/\D/g, "") }))} /></Field>
             <Field label="New PIN" id="np"><Input id="np" type="password" inputMode="numeric" autoComplete="new-password" maxLength={PIN_MAX} value={pins.next} onChange={(e) => setPins((p) => ({ ...p, next: e.target.value.replace(/\D/g, "") }))} /></Field>
-            <Button type="submit" disabled={!pins.current || pins.next.length < 6}>Change PIN</Button>
+            <Button type="submit" disabled={!pins.current || pins.next.length < PIN_MIN}>Change PIN</Button>
           </form>
           <div className="border-t divider pt-3">
             <p className="font-semibold">Recovery code</p>
@@ -234,7 +234,7 @@ export function Settings() {
                 </li>
               ))}
             </ul>
-            <Button className="mt-3" variant="secondary" size="sm" onClick={async () => { await post("/auth/logout-all"); location.href = "/signin"; }}>
+            <Button className="mt-3" variant="secondary" size="sm" onClick={async () => { await post("/auth/logout-all"); location.href = "/"; }}>
               Sign out everywhere
             </Button>
           </div>

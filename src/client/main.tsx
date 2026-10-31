@@ -92,7 +92,7 @@ function RequireAuth({ children }: { children: ReactNode }) {
         <Spinner size={32} label="Loading Crew Plus" />
       </Centered>
     );
-  if (!session) return <Navigate to={`/signin?next=${encodeURIComponent(loc.pathname + loc.search)}`} replace />;
+  if (!session) return <Navigate to={`/?next=${encodeURIComponent(loc.pathname + loc.search)}`} replace />;
   return <RealtimeProvider>{children}</RealtimeProvider>;
 }
 
@@ -101,6 +101,12 @@ function GuestOnly({ children }: { children: ReactNode }) {
   if (loading) return null;
   if (session) return <Navigate to="/home" replace />;
   return <>{children}</>;
+}
+
+/** Old /signin links (and their ?next=) land on the sign-in homepage. */
+function ToRoot() {
+  const loc = useLocation();
+  return <Navigate to={`/${loc.search}`} replace />;
 }
 
 function Suspended() {
@@ -130,8 +136,8 @@ const router = createBrowserRouter([
     errorElement: <RouteError />,
     element: <Suspended />,
     children: [
-      { path: "/", element: <Navigate to="/home" replace /> },
-      { path: "/signin", element: <GuestOnly><SignIn /></GuestOnly> },
+      { path: "/", element: <GuestOnly><SignIn /></GuestOnly> },
+      { path: "/signin", element: <ToRoot /> },
       { path: "/signup", element: <GuestOnly><SignUp /></GuestOnly> },
       { path: "/recover", element: <Recover /> },
       { path: "/onboarding", element: <RequireAuth><Onboarding /></RequireAuth> },

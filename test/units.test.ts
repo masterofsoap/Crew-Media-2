@@ -160,7 +160,8 @@ describe("security helpers", () => {
   });
 
   it("flags weak PINs", () => {
-    for (const p of ["000000", "123456", "654321", "111111", "123123"]) expect(isWeakPin(p)).toBe(true);
+    for (const p of ["000000", "123456", "654321", "111111", "123123", "1234", "0000", "4321", "1212", "1122", "1990", "2024", "2580"]) expect(isWeakPin(p)).toBe(true);
+    for (const p of ["4827", "7391", "482915"]) expect(isWeakPin(p)).toBe(false);
     expect(isWeakPin("482915")).toBe(false);
   });
 });

@@ -61,7 +61,7 @@ Code map: `src/worker/routes/*` (API), `src/worker/lib/*` (sessions, hydration, 
 
 ## Authentication, profiles, and recovery
 
-- **Sign-up** asks for a display name, handle and a 6–12 digit PIN. Weak PINs (repeats, sequences) are rejected. A PIN is stored as HMAC(pepper) followed by PBKDF2-SHA256 with 100k iterations and a per-identity salt. The server-side pepper means a database leak alone can't be brute-forced offline.
+- **Sign-up** asks for a display name, handle and a 4–12 digit PIN. Guessable PINs are rejected: repeats, sequences, ABAB/AABB patterns, years (1900–2029) and keypad patterns like 2580. A 4-digit PIN has only 10,000 combinations, so the per-handle limit (10 tries per 15 min) and progressive lockout (from the 5th failure) are what make it safe. A PIN is stored as HMAC(pepper) followed by PBKDF2-SHA256 with 100k iterations and a per-identity salt. The server-side pepper means a database leak alone can't be brute-forced offline.
 - **Brute-force defense:**
   - Per-IP and per-handle rate limits.
   - Progressive lockout after 5 failures (1 min, doubling, up to 24 h).

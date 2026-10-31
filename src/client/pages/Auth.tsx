@@ -7,6 +7,7 @@ import { ApiError, errorMessage, post } from "../lib/api";
 import { useSession } from "../lib/session";
 import { Button, Field, Input } from "../components/ui";
 import { Icon } from "../components/Icon";
+import { LogoMark } from "../components/Logo";
 
 declare global {
   interface Window {
@@ -37,40 +38,19 @@ function Turnstile({ siteKey, onToken }: { siteKey: string | null; onToken: (t: 
 
 function AuthShell({ title, subtitle, children, footer }: { title: string; subtitle: string; children: ReactNode; footer: ReactNode }) {
   return (
-    <div className="grid min-h-dvh lg:grid-cols-2">
-      <div className="relative hidden overflow-hidden lg:block">
-        <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 20% 20%, color-mix(in srgb, var(--c-accent) 40%, transparent), transparent 60%), radial-gradient(ellipse at 80% 70%, color-mix(in srgb, var(--c-accent2) 45%, transparent), transparent 60%)" }} />
-        <div className="relative flex h-full flex-col justify-between p-12">
-          <div className="flex items-center gap-3">
-            <svg width="44" height="44" viewBox="0 0 32 32" aria-hidden="true">
-              <rect width="32" height="32" rx="9" fill="var(--c-surface2)" />
-              <path d="M21.5 10.5a8 8 0 1 0 0 11" fill="none" stroke="var(--c-accent)" strokeWidth="3.2" strokeLinecap="round" />
-              <path d="M22 13v6M19 16h6" stroke="var(--c-accent2)" strokeWidth="2.6" strokeLinecap="round" />
-            </svg>
-            <span className="heading text-2xl font-extrabold">Crew Plus</span>
-          </div>
-          <div className="max-w-md space-y-5">
-            <h2 className="text-5xl font-extrabold leading-[1.05]">Your people. Your corner of the internet.</h2>
-            <ul className="space-y-3 text-lg text-fg/85">
-              <li className="flex items-center gap-3"><Icon name="palette" className="text-accent" /> Profiles you can truly make your own</li>
-              <li className="flex items-center gap-3"><Icon name="sparkle" className="text-accent" /> A lively community, including clearly-labeled AI friends</li>
-              <li className="flex items-center gap-3"><Icon name="clock" className="text-accent" /> Photos and videos that disappear after 7 days</li>
-            </ul>
-          </div>
-          <p className="text-sm text-muted">For family, friends, and the businesses they run.</p>
-        </div>
-      </div>
-      <div className="flex items-center justify-center p-6">
-        <div className="w-full max-w-sm space-y-6">
+    <main className="flex min-h-dvh flex-col items-center justify-center px-5 py-10">
+      <div className="w-full max-w-sm">
+        <div className="mb-8 flex flex-col items-center gap-4 text-center">
+          <LogoMark size={64} />
           <div>
-            <h1 className="text-3xl font-extrabold">{title}</h1>
-            <p className="mt-1 text-muted">{subtitle}</p>
+            <h1 className="text-2xl font-extrabold">{title}</h1>
+            {subtitle ? <p className="mt-1 text-sm text-muted">{subtitle}</p> : null}
           </div>
-          {children}
-          <div className="text-center text-sm text-muted">{footer}</div>
         </div>
+        <div className="card space-y-5 p-6">{children}</div>
+        {footer ? <div className="mt-5 text-center text-sm text-muted">{footer}</div> : null}
       </div>
-    </div>
+    </main>
   );
 }
 
@@ -180,7 +160,7 @@ export function SignUp() {
     );
 
   return (
-    <AuthShell title="Create your account" subtitle="Just a name, a handle and a PIN." footer={<>Already have an account? <Link to="/signin" className="font-semibold text-accent">Sign in</Link></>}>
+    <AuthShell title="Create your account" subtitle="Just a name, a handle and a PIN." footer={<>Already have an account? <Link to="/" className="font-semibold text-accent">Sign in</Link></>}>
       <form onSubmit={submit} className="space-y-4" noValidate>
         <Field label="Display name" id="dn" error={errors.displayName}>
           <Input id="dn" autoComplete="name" maxLength={DISPLAY_NAME_MAX} value={displayName} onChange={(e) => setDisplayName(e.target.value)} invalid={!!errors.displayName} />
@@ -234,7 +214,7 @@ export function SignIn() {
     }
   };
   return (
-    <AuthShell title="Sign in" subtitle="Welcome back to your crew." footer={<>New here? <Link to="/signup" className="font-semibold text-accent">Create an account</Link></>}>
+    <AuthShell title="Sign in to Crew Plus" subtitle="Welcome back to your crew." footer={<>New here? <Link to="/signup" className="font-semibold text-accent">Create an account</Link></>}>
       <form onSubmit={submit} className="space-y-4" noValidate>
         <Field label="Handle" id="h">
           <div className="relative">
@@ -278,7 +258,7 @@ export function Recover() {
     <AuthShell
       title="Recover your account"
       subtitle="Use the recovery code you saved at sign-up, or a one-time reset code from a Crew Plus administrator."
-      footer={<Link to="/signin" className="font-semibold text-accent">Back to sign in</Link>}
+      footer={<Link to="/" className="font-semibold text-accent">Back to sign in</Link>}
     >
       <form
         className="space-y-4"

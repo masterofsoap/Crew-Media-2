@@ -161,7 +161,7 @@ export function AdminDashboard() {
         <Stat label="Business profiles" value={compactNumber(c.business ?? 0)} />
         <Stat label="AI personas / audience" value={`${compactNumber(c.ai_personas ?? 0)} / ${compactNumber(c.ai_audience ?? 0)}`} />
         <Stat label="AI personas enabled" value={compactNumber(c.ai_enabled ?? 0)} hint={`${c.ai_active_24h ?? 0} active in 24h`} />
-        <Stat label="Posts (24h)" value={compactNumber(c.posts_24h ?? 0)} hint={`${c.ai_posts_24h ?? 0} AI-generated`} />
+        <Stat label="Posts (24h)" value={compactNumber(c.posts_24h ?? 0)} hint={`${c.ai_posts_24h ?? 0} were AI comments`} />
         <Stat label="Messages (24h)" value={compactNumber(c.messages_24h ?? 0)} />
         <Stat label="Open reports" value={d.openReports} />
         <Stat label="AI calls today" value={`${calls} / ${d.aiBudget.dailyCallBudget}`} hint={d.aiBudget.paused ? "AI is PAUSED" : undefined} />
@@ -186,18 +186,18 @@ export function AdminDashboard() {
           ))}
         </div>
       </Card>
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2 [&>*]:min-w-0">
         <Card className="p-4">
           <h2 className="mb-2 font-extrabold">Recent registrations</h2>
           <ul className="space-y-2">
             {d.recentRegistrations.map((p) => (
-              <li key={p.id}><Link to={`/admin/accounts/${p.id}`} className="flex items-center gap-2 hover:underline"><Avatar profile={p} size={28} /><NameLine p={p} linked={false} size="sm" /><span className="ml-auto text-xs text-muted">{timeAgo(p.createdAt)}</span></Link></li>
+              <li key={p.id}><Link to={`/admin/accounts/${p.id}`} className="flex min-w-0 items-center gap-2 hover:underline"><Avatar profile={p} size={28} /><span className="min-w-0 flex-1"><NameLine p={p} linked={false} size="sm" stacked /></span><span className="shrink-0 text-xs text-muted">{timeAgo(p.createdAt)}</span></Link></li>
             ))}
           </ul>
         </Card>
         <Card className="p-4">
           <h2 className="mb-2 font-extrabold">Recent posts</h2>
-          <ul className="space-y-2 text-sm">
+          <ul className="space-y-2 text-sm [overflow-wrap:anywhere]">
             {d.recentPosts.map((p) => (
               <li key={p.id}><Link to={`/post/${p.id}`} className="hover:underline"><b>@{p.author.handle}</b> <span className="text-muted">{p.text.slice(0, 90)}</span></Link></li>
             ))}
@@ -233,7 +233,7 @@ export function AdminAccounts() {
           <tbody>
             {(r.data?.items ?? []).map((p) => (
               <tr key={p.id} className="border-t divider hover:bg-surface2/40">
-                <td className="p-3"><Link to={`/admin/accounts/${p.id}`} className="flex items-center gap-2"><Avatar profile={p} size={28} /><NameLine p={p} linked={false} size="sm" /></Link></td>
+                <td className="p-3"><Link to={`/admin/accounts/${p.id}`} className="flex items-center gap-2"><Avatar profile={p} size={28} /><span className="min-w-0"><NameLine p={p} linked={false} size="sm" stacked /></span></Link></td>
                 <td><span className={`chip ${p.status !== "active" ? "!text-danger" : ""}`}>{p.status}</span></td>
                 <td className="tabular-nums">{p.visibility}</td>
                 <td className="tabular-nums">{compactNumber(p.followerCount)}</td>
@@ -334,7 +334,7 @@ export function AdminAccountDetail() {
           </div>
         ) : null}
       </Card>
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2 [&>*]:min-w-0">
         <Card className="space-y-1 p-5 text-sm">
           <h2 className="mb-1 text-lg font-extrabold">Login identity</h2>
           {d.identity ? (
@@ -357,7 +357,7 @@ export function AdminAccountDetail() {
       </div>
       <Card className="p-5">
         <h2 className="mb-2 text-lg font-extrabold">Recent posts</h2>
-        <ul className="space-y-1 text-sm">
+        <ul className="space-y-1 text-sm [overflow-wrap:anywhere]">
           {d.recentPosts.map((x) => <li key={x.id}><Link to={`/post/${x.id}`} className="hover:underline">{x.deleted_at ? <i className="text-muted">deleted</i> : x.text.slice(0, 120)}</Link> <span className="text-xs text-muted">{timeAgo(x.created_at)}{x.ai_generated ? " · AI" : ""}{x.moderation_status !== "ok" ? ` · ${x.moderation_status}` : ""}</span></li>)}
         </ul>
         {d.reports.length ? <p className="mt-2 text-sm text-danger">{d.reports.length} report(s) against this profile — see Moderation.</p> : null}
@@ -406,7 +406,7 @@ export function AdminAdmins() {
           {(q.data?.items ?? []).map((a) => (
             <li key={a.identityId} className="flex items-center gap-3 p-4">
               {a.profile ? <Avatar profile={a.profile} size={36} /> : null}
-              <span className="min-w-0 flex-1">{a.profile ? <NameLine p={a.profile} /> : a.identityId}<span className="block text-xs text-muted">since {fullDate(a.grantedAt)}</span></span>
+              <span className="min-w-0 flex-1">{a.profile ? <NameLine p={a.profile} stacked /> : a.identityId}<span className="block text-xs text-muted">since {fullDate(a.grantedAt)}</span></span>
               <span className="chip capitalize">{a.role}</span>
               {a.identityId !== session?.identityId ? <Button size="sm" variant="ghost" onClick={() => setRevoke(a.identityId)}>Revoke</Button> : <span className="text-xs text-muted">you</span>}
             </li>

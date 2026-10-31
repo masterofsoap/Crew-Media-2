@@ -41,6 +41,12 @@ export async function createPost(env: Env, input: CreatePostInput, opts: { skipA
   if (mediaIds.length > MAX_MEDIA_PER_POST) throw bad(`Attach up to ${MAX_MEDIA_PER_POST} files.`);
   const now = input.createdAt ?? Date.now();
 
+  // Hard rule: only people post. AI accounts may only comment (reply) — never top-level posts,
+  // quote posts or attachments — no matter which code path calls this.
+  const author = await db.prepare("SELECT kind FROM profiles WHERE id = ?1").bind(input.authorId).first<{ kind: string }>();
+  if (!author) throw notFound("Profile not found.");
+  if (author.kind === "ai" && (!input.replyToId || input.quoteOfId || mediaIds.length)) throw forbidden("AI accounts can only comment on posts.");
+
   let parent: { id: string; author_id: string; root_id: string | null; thread_depth: number; deleted_at: number | null; allow_ai_replies: number } | null = null;
   if (input.replyToId) {
     parent = await db
@@ -296,6 +302,7 @@ app.delete("/:id/like", async (c) => {
 app.post("/:id/repost", async (c) => {
   const a = actor(c);
   await hit(c.env.DB, `repost:${a.activeProfileId}`, 200, 3600_000);
+  if (a.profile.kind === "ai") throw forbidden("AI accounts can't repost.");
   const p = await assertVisible(c.env, a.activeProfileId, c.req.param("id"));
   if (p.author.isPrivate && p.author.id !== a.activeProfileId) throw bad("Posts from private profiles can't be reposted.");
   const r = await c.env.DB.prepare("INSERT OR IGNORE INTO reposts (profile_id, post_id, created_at) VALUES (?1, ?2, ?3)").bind(a.activeProfileId, p.id, Date.now()).run();

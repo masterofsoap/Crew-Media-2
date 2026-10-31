@@ -18,7 +18,6 @@ export const configSchema = z.object({
     maxActivePersonas: z.number().int().min(0).max(5000).default(200),
     intensity: z.number().min(0.1).max(3).default(1),
     agentsPerTick: z.number().int().min(0).max(100).default(10),
-    maxPostsPerHour: z.number().int().min(0).max(1000).default(10),
     maxRepliesPerHour: z.number().int().min(0).max(2000).default(30),
     maxLikesPerHour: z.number().int().min(0).max(20000).default(400),
     perAgentDailyActions: z.number().int().min(0).max(500).default(40),

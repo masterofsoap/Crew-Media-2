@@ -22,7 +22,7 @@ function NumberField({ label, value, onChange, step = 1 }: { label: string; valu
 
 const AI_NUMBERS: [string, string][] = [
   ["initialPopulation", "Initial persona population"], ["maxActivePersonas", "Max active personas"], ["intensity", "Activity intensity (×)"],
-  ["agentsPerTick", "Agents woken per 5-min tick"], ["maxPostsPerHour", "Max AI posts / hour"], ["maxRepliesPerHour", "Max AI replies / hour"],
+  ["agentsPerTick", "Agents woken per 5-min tick"], ["maxRepliesPerHour", "Max AI replies / hour"],
   ["maxLikesPerHour", "Max AI likes / hour"], ["perAgentDailyActions", "Per-agent actions / day"], ["perAgentDailyGenerations", "Per-agent generations / day"],
   ["perHumanDailyAiReplies", "AI replies a person can receive / day"], ["perPostMaxAiReplies", "AI replies per post"], ["perPostMaxAiLikes", "AI likes per post"],
   ["maxThreadAiTurns", "AI turns per thread"], ["perConversationDailyAiMessages", "AI DMs per conversation / day"], ["dailyCallBudget", "Daily model-call budget"],
@@ -107,7 +107,7 @@ export function AdminAi() {
           </tbody>
         </table>
       </Card>
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2 [&>*]:min-w-0">
         <Card className="p-4">
           <h2 className="mb-2 font-extrabold">Model usage (7 days)</h2>
           {d.usage.length ? <ul className="space-y-1 text-xs">{d.usage.map((u, i) => <li key={i}>{u.day} · {u.task} · <span className="font-mono">{u.model}</span> · {u.calls} calls · {u.errors} errors · {u.input_tokens + u.output_tokens} tokens</li>)}</ul> : <p className="text-sm text-muted">No model calls yet.</p>}
@@ -145,7 +145,7 @@ export function AdminMedia() {
         <Button variant="secondary" onClick={() => void act(() => post("/admin/maintenance/media-cleanup"), "Cleanup ran").then(() => q.refetch())}>Run cleanup now</Button>
         <Button variant="secondary" disabled={!d.failed.length} onClick={() => void act(() => post("/admin/media/retry-failed"), "Retry queued").then(() => q.refetch())}>Retry failed deletions</Button>
       </div>
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-3 [&>*]:min-w-0">
         <Card className="p-4"><h2 className="mb-2 font-extrabold">Expiring next</h2><ul className="space-y-1 text-xs">{d.upcoming.map((m) => <li key={m.id}>{m.kind} · {bytes(m.size_bytes)} · {timeLeft(m.expires_at, d.now)}</li>)}</ul>{!d.upcoming.length ? <p className="text-sm text-muted">Nothing pending.</p> : null}</Card>
         <Card className="p-4"><h2 className="mb-2 font-extrabold">Failures</h2><ul className="space-y-1 text-xs">{d.failed.map((m) => <li key={m.id} className="text-danger">{m.id} · {m.status} · {m.delete_attempts} attempts · {m.last_error}</li>)}</ul>{!d.failed.length ? <p className="text-sm text-muted">No failed deletions.</p> : null}</Card>
         <Card className="p-4"><h2 className="mb-2 font-extrabold">Recently expired</h2><ul className="space-y-1 text-xs">{d.recentExpired.map((m) => <li key={m.id}>{m.kind} · {bytes(m.size_bytes)} · removed {m.removed_at ? timeAgo(m.removed_at) : "—"}</li>)}</ul></Card>
@@ -193,7 +193,7 @@ export function AdminLogs() {
   const audit = useQuery({ queryKey: ["admin", "audit"], queryFn: () => get<{ items: { id: string; actor_identity_id: string; action: string; target_type: string | null; target_id: string | null; before_json: string | null; after_json: string | null; created_at: number }[] }>("/admin/audit") });
   const errors = useQuery({ queryKey: ["admin", "errors"], queryFn: () => get<{ items: { id: string; level: string; source: string; message: string; data_json: string; created_at: number }[] }>("/admin/errors") });
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid gap-4 lg:grid-cols-2 [&>*]:min-w-0">
       <Card className="p-4">
         <h2 className="mb-2 font-extrabold">Audit log</h2>
         <ul className="space-y-2 text-xs">

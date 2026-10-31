@@ -55,7 +55,7 @@ export function UserRow({ p, bio, following }: { p: ProfileSummary; bio?: string
     <Link to={`/@${p.handle}`} className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-surface2/40">
       <Avatar profile={p} size={44} />
       <div className="min-w-0 flex-1">
-        <NameLine p={p} linked={false} />
+        <NameLine p={p} linked={false} stacked />
         {bio ? <p className="mt-0.5 line-clamp-2 text-sm text-muted">{bio}</p> : null}
       </div>
       {active && active.id !== p.id ? <FollowButton profileId={p.id} initial={following ? "following" : "none"} /> : null}

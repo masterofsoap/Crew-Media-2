@@ -2,8 +2,6 @@ import { THEME_IDS } from "../../shared/themes";
 import { getConfig, getFlag, setFlag } from "../lib/settings";
 import { createProfileStatements } from "../lib/profiles";
 import { opsLog } from "../lib/log";
-import { newId } from "../lib/ids";
-import { createPost } from "../routes/posts";
 import { ARCHETYPES, AUDIENCE_FIRST, AUDIENCE_LAST, type ActivityLevel, type Archetype } from "./personas";
 import { enqueue } from "../jobs/queue";
 
@@ -55,9 +53,9 @@ function planPopulation(size: number): PersonaPlan[] {
 }
 
 /**
- * Seed the initial AI population: persona profiles + agent records, a controlled set of seed
- * posts spread over the previous 3 days, interest-based follow relationships between AI
- * accounts, and interest-matched likes. No model calls are made; content is labeled AI-generated.
+ * Seed the initial AI population: persona profiles + agent records and interest-based follow
+ * relationships between AI accounts. AI accounts never write posts — they only like, follow and
+ * comment on what people post. No model calls are made here.
  */
 export async function seedPopulation(env: Env) {
   const db = env.DB;
@@ -102,23 +100,6 @@ export async function seedPopulation(env: Env) {
     created.push({ id: p.id, plan });
   }
 
-  // Seed posts: each persona gets 1–2 distinct posts from its archetype pool, spread over 72h.
-  const usedPosts = new Set<string>();
-  const postIds: { id: string; arch: Archetype; author: string }[] = [];
-  for (const { id, plan } of created) {
-    const pool = plan.arch.seedPosts.filter((t) => !usedPosts.has(t));
-    const count = Math.min(pool.length, 1 + (Math.random() < 0.5 ? 1 : 0));
-    for (const text of shuffle([...pool]).slice(0, count)) {
-      usedPosts.add(text);
-      try {
-        const pid = await createPost(env, { authorId: id, text, aiGenerated: true, createdAt: now - Math.floor(Math.random() * 72 * 3600_000) }, { skipAiEvent: true });
-        postIds.push({ id: pid, arch: plan.arch, author: id });
-      } catch (e) {
-        await opsLog(db, "warn", "ai.seed", "seed post skipped", { error: String(e).slice(0, 200) });
-      }
-    }
-  }
-
   // Follow graph among personas by interest overlap (real follow rows, source = ai).
   const stmts: D1PreparedStatement[] = [];
   for (const a of created) {
@@ -131,17 +112,9 @@ export async function seedPopulation(env: Env) {
       stmts.push(db.prepare("INSERT OR IGNORE INTO follows (follower_id, followee_id, source, created_at) VALUES (?1, ?2, 'ai', ?3)").bind(a.id, b.id, now - Math.floor(Math.random() * 20 * 24 * 3600_000)));
     }
   }
-  // Interest-matched likes on seed posts.
-  for (const p of postIds) {
-    const fans = shuffle(created.filter((c) => c.id !== p.author && c.plan.arch.interests.some((i) => p.arch.interests.includes(i)))).slice(0, Math.floor(Math.random() * 6));
-    for (const f of fans) {
-      stmts.push(db.prepare("INSERT OR IGNORE INTO likes (profile_id, post_id, created_at) VALUES (?1, ?2, ?3)").bind(f.id, p.id, now - Math.floor(Math.random() * 24 * 3600_000)));
-      stmts.push(db.prepare("INSERT OR IGNORE INTO ai_interactions (id, agent_id, target_profile_id, post_id, kind, dedupe_key, created_at) VALUES (?1, ?2, ?3, ?4, 'like', ?5, ?6)").bind(newId(), f.id, p.author, p.id, `like:${f.id}:${p.id}`, now));
-    }
-  }
   for (let i = 0; i < stmts.length; i += 80) await db.batch(stmts.slice(i, i + 80));
 
-  await setFlag(db, "ai_seeded", { at: Date.now(), personas: created.length, posts: postIds.length });
-  await opsLog(db, "warn", "ai.seed", "AI population seeded", { personas: created.length, posts: postIds.length });
+  await setFlag(db, "ai_seeded", { at: Date.now(), personas: created.length });
+  await opsLog(db, "warn", "ai.seed", "AI population seeded", { personas: created.length });
 }
 

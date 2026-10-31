@@ -53,25 +53,40 @@ export function KindChip({ kind }: { kind: ProfileSummary["kind"] }) {
 }
 
 /** Display name + milestone badge + account-kind chip + handle. */
-export function NameLine({ p, showHandle = true, linked = true, size = "md" }: { p: ProfileSummary; showHandle?: boolean; linked?: boolean; size?: "sm" | "md" }) {
+/**
+ * Display name + badge + kind chip, then the handle. The name always gets priority for space:
+ * `stacked` puts the handle on its own line; `handle="wide"` hides it below the sm breakpoint.
+ */
+export function NameLine({ p, showHandle = true, linked = true, size = "md", stacked = false, handle = "always" }: { p: ProfileSummary; showHandle?: boolean; linked?: boolean; size?: "sm" | "md"; stacked?: boolean; handle?: "always" | "wide" }) {
   const name = (
     <span className={`flex min-w-0 items-center gap-1 ${size === "sm" ? "text-sm" : ""}`}>
-      <span className="truncate font-bold">{p.displayName}</span>
-      <BadgeStrip level={p.milestoneLevel} size={size === "sm" ? 14 : 17} />
+      <span className="min-w-0 truncate font-bold">{p.displayName}</span>
+      <span className="flex shrink-0 items-center gap-1">
+        <BadgeStrip level={p.milestoneLevel} size={size === "sm" ? 14 : 17} />
+        <KindChip kind={p.kind} />
+      </span>
       {p.isPrivate ? <span className="sr-only">(private)</span> : null}
-      <KindChip kind={p.kind} />
     </span>
   );
-  return (
+  const nameEl = linked ? (
+    <Link to={`/@${p.handle}`} className="min-w-0 max-w-full hover:underline" onClick={(e) => e.stopPropagation()}>
+      {name}
+    </Link>
+  ) : (
+    name
+  );
+  const handleEl = showHandle ? (
+    <span className={`min-w-0 truncate text-sm text-muted ${handle === "wide" && !stacked ? "hidden sm:block" : ""}`}>@{p.handle}</span>
+  ) : null;
+  return stacked ? (
+    <span className="flex min-w-0 flex-col">
+      {nameEl}
+      {handleEl}
+    </span>
+  ) : (
     <span className="flex min-w-0 items-center gap-1.5">
-      {linked ? (
-        <Link to={`/@${p.handle}`} className="min-w-0 hover:underline" onClick={(e) => e.stopPropagation()}>
-          {name}
-        </Link>
-      ) : (
-        name
-      )}
-      {showHandle ? <span className="truncate text-sm text-muted">@{p.handle}</span> : null}
+      <span className="min-w-0 shrink">{nameEl}</span>
+      {handleEl ? <span className="min-w-0 shrink-[2]">{handleEl}</span> : null}
     </span>
   );
 }

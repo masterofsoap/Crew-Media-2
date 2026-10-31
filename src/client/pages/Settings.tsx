@@ -69,7 +69,7 @@ function PeopleList({ kind }: { kind: "blocks" | "mutes" }) {
       {q.data.items.map((p) => (
         <li key={p.id} className="flex items-center gap-3">
           <Avatar profile={p} size={32} />
-          <span className="min-w-0 flex-1"><NameLine p={p} /></span>
+          <span className="min-w-0 flex-1"><NameLine p={p} stacked /></span>
           <Button size="sm" variant="secondary" onClick={async () => { await del(`/${kind}/${p.id}`); toast(kind === "blocks" ? "Unblocked" : "Unmuted"); void q.refetch(); }}>
             {kind === "blocks" ? "Unblock" : "Unmute"}
           </Button>
@@ -216,7 +216,7 @@ export function Settings() {
             {newCode ? (
               <code className="block select-all rounded-lg bg-surface2 p-3 text-center font-mono font-bold tracking-wider">{newCode}</code>
             ) : (
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Input type="password" inputMode="numeric" placeholder="Confirm PIN" aria-label="Confirm PIN" value={codePin} onChange={(e) => setCodePin(e.target.value.replace(/\D/g, ""))} className="!w-40" />
                 <Button variant="secondary" disabled={!codePin} onClick={async () => { try { const r = await post<{ recoveryCode: string }>("/auth/recovery-code", { pin: codePin }); setNewCode(r.recoveryCode); setCodePin(""); } catch (e) { toast(errorMessage(e), "error"); } }}>
                   Generate new code
@@ -228,7 +228,7 @@ export function Settings() {
             <p className="mb-2 font-semibold">Active sessions</p>
             <ul className="space-y-1 text-sm">
               {(sessions.data?.items ?? []).map((x, i) => (
-                <li key={i} className="flex justify-between gap-3">
+                <li key={i} className="flex flex-wrap justify-between gap-x-3 gap-y-0.5">
                   <span className="truncate text-muted">{x.userAgent.slice(0, 60) || "Unknown device"} {x.current ? <span className="chip">This device</span> : null}</span>
                   <span className="shrink-0 text-xs text-muted">Last active {fullDate(x.lastSeenAt)}</span>
                 </li>
@@ -245,7 +245,7 @@ export function Settings() {
             {session!.profiles.map((p) => (
               <li key={p.id} className="flex items-center gap-3">
                 <Avatar profile={p} size={36} />
-                <span className="min-w-0 flex-1"><NameLine p={p} linked={false} /></span>
+                <span className="min-w-0 flex-1"><NameLine p={p} linked={false} stacked /></span>
                 {p.id === active.id ? <span className="chip">Active</span> : <Button size="sm" variant="secondary" onClick={() => void switchProfile(p.id)}>Switch</Button>}
               </li>
             ))}

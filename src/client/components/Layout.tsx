@@ -186,9 +186,19 @@ function RightRail() {
   );
 }
 
+/** Full-screen views on phones: no bottom nav, no floating button (e.g. an open conversation). */
+export function isImmersive(pathname: string) {
+  return /^\/messages\/[^/]+/.test(pathname);
+}
+
+/** The floating compose button only appears where people browse posts. */
+const FAB_ROUTES = [/^\/home/, /^\/explore/, /^\/search/, /^\/hashtag\//, /^\/topic\//, /^\/notifications/, /^\/@[^/]+$/];
+
 function MobileBar({ onCompose }: { onCompose: () => void }) {
   const { active } = useSession();
   const loc = useLocation();
+  const immersive = isImmersive(loc.pathname);
+  const showFab = FAB_ROUTES.some((r) => r.test(loc.pathname));
   const [sheet, setSheet] = useState(false);
   const [more, setMore] = useState(false);
   const items = useNav();
@@ -213,7 +223,7 @@ function MobileBar({ onCompose }: { onCompose: () => void }) {
           <Icon name="menu" size={22} />
         </button>
       </div>
-      <nav aria-label="Primary" className="fixed inset-x-0 bottom-0 z-30 flex justify-around border-t divider bg-[color-mix(in_srgb,var(--c-bg)_92%,transparent)] pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden">
+      <nav aria-label="Primary" className={`fixed inset-x-0 bottom-0 z-30 justify-around border-t divider ${immersive ? "hidden" : "flex"} bg-[color-mix(in_srgb,var(--c-bg)_92%,transparent)] pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden`}>
         {primary.map((i) => (
           <NavLink key={i.to} to={i.to} aria-label={i.label} className={({ isActive }) => `relative flex flex-1 justify-center py-3 ${isActive ? "text-accent" : "text-fg"}`}>
             <Icon name={i.icon} size={24} />
@@ -224,9 +234,11 @@ function MobileBar({ onCompose }: { onCompose: () => void }) {
           <Icon name="user" size={24} />
         </NavLink>
       </nav>
-      <button type="button" onClick={onCompose} aria-label="Write a post" className="btn btn-primary fixed bottom-20 right-4 z-30 h-14 w-14 rounded-full shadow-lg md:hidden">
+      {showFab ? (
+      <button type="button" onClick={onCompose} aria-label="Write a post" className="btn btn-primary fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-30 h-14 w-14 rounded-full shadow-lg md:hidden">
         <Icon name="plus" size={26} />
       </button>
+      ) : null}
       <Dialog open={sheet} onClose={() => setSheet(false)} title="Switch profile">
         <ProfileSwitcher onDone={() => setSheet(false)} />
       </Dialog>
@@ -244,6 +256,7 @@ function MobileBar({ onCompose }: { onCompose: () => void }) {
 }
 
 export function AppLayout({ wide = false }: { wide?: boolean }) {
+  const { pathname } = useLocation();
   const [compose, setCompose] = useState(false);
   return (
     <div className="mx-auto flex min-h-dvh max-w-[1280px] justify-center">
@@ -251,7 +264,7 @@ export function AppLayout({ wide = false }: { wide?: boolean }) {
         Skip to content
       </a>
       <Sidebar onCompose={() => setCompose(true)} />
-      <div className={`min-w-0 flex-1 border-x divider pb-24 md:pb-0 ${wide ? "" : "max-w-[620px]"}`}>
+      <div className={`min-w-0 flex-1 border-x divider md:pb-0 ${isImmersive(pathname) ? "" : "pb-24"} ${wide ? "" : "max-w-[620px]"}`}>
         <MobileBar onCompose={() => setCompose(true)} />
         <main id="main" tabIndex={-1} className="outline-none">
           <Outlet />

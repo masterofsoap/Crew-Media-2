@@ -62,7 +62,7 @@ function NewConversation({ open, onClose }: { open: boolean; onClose: () => void
             .map((p) => (
               <button key={p.id} type="button" className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-surface2" onClick={() => picked.length < 8 && setPicked((x) => [...x, p])}>
                 <Avatar profile={p} size={36} />
-                <NameLine p={p} linked={false} />
+                <NameLine p={p} linked={false} stacked />
               </button>
             ))}
         </div>
@@ -255,7 +255,7 @@ export function Conversation() {
   const lead = others[0];
 
   return (
-    <div className="flex h-[calc(100dvh-56px)] flex-col md:h-dvh">
+    <div className="flex h-[calc(100dvh-57px)] flex-col md:h-dvh">
       <PageHeader
         back={() => nav("/messages")}
         title={conv.data ? convTitle(conv.data, me.id) : "Conversation"}

@@ -5,10 +5,9 @@ import { isBlockedEitherWay } from "../lib/views";
 import { enqueue, markJob, jobStatus, type AiJob } from "../jobs/queue";
 import { createPost } from "../routes/posts";
 import { sendMessage } from "../routes/messages";
-import { getTrends } from "../jobs/trends";
-import { AiUnavailable, chat, budgetState } from "./provider";
+import { AiUnavailable, chat } from "./provider";
 import {
-  aiFollow, aiLike, aiUnfollow, bumpAgent, claim, countRecent, generateDm, generatePost, generateReply, loadAgent, loadPostLite,
+  aiFollow, aiLike, aiUnfollow, bumpAgent, claim, countRecent, generateDm, generateReply, loadAgent, loadPostLite,
   nextWakeAt, relevance, remember, type Agent, type PostLite,
 } from "./agent";
 import { seedPopulation } from "./seed";
@@ -174,14 +173,6 @@ async function handleReact(env: Env, agentId: string, postId: string, intent: "r
     }
   }
 
-  // Occasionally repost exceptional, highly relevant human posts.
-  if (!post.aiGenerated && rel > 0.75 && post.quality > 0.7 && Math.random() < 0.12) {
-    if (await claim(env.DB, agent.id, "repost", post.authorId, post.id, `repost:${agent.id}:${post.id}`)) {
-      await env.DB.prepare("INSERT OR IGNORE INTO reposts (profile_id, post_id, created_at) VALUES (?1, ?2, ?3)").bind(agent.id, post.id, Date.now()).run();
-      acted = true;
-    }
-  }
-
   // Following is a separate, earned decision: sustained relevance, not a single post.
   if (rel > 0.5 && Math.random() < 0.25) {
     const history = (await env.DB.prepare("SELECT COUNT(*) AS n FROM ai_interactions WHERE agent_id = ?1 AND target_profile_id = ?2 AND kind IN ('like','reply')").bind(agent.id, post.authorId).first<{ n: number }>())?.n ?? 0;
@@ -237,28 +228,10 @@ async function handleWake(env: Env, agentId: string): Promise<"done" | "skipped"
   try {
     if (agent.actionsToday >= cfg.ai.perAgentDailyActions) return "skipped";
 
-    // 1) Maybe write an original post.
-    const lastPost = await db.prepare("SELECT MAX(created_at) AS t FROM posts WHERE author_id = ?1 AND reply_to_id IS NULL").bind(agentId).first<{ t: number | null }>();
-    const hoursSince = lastPost?.t ? (Date.now() - lastPost.t) / 3600_000 : 999;
-    const postChance = { daily: 0.6, regular: 0.45, occasional: 0.35, rare: 0.3 }[agent.activity];
-    const budget = await budgetState(db, cfg);
-    if (
-      hoursSince > 3 && Math.random() < postChance && agent.generationsToday < cfg.ai.perAgentDailyGenerations && budget.ok &&
-      (await countRecent(db, "post", 3600_000)) < cfg.ai.maxPostsPerHour
-    ) {
-      const trends = await getTrends(env).catch(() => []);
-      const trend = trends.find((t) => agent.interests.includes(t.tag) || agent.keywords.includes(t.tag))?.tag ?? null;
-      if (await claim(db, agentId, "post", null, null, `post:${agentId}:${Math.floor(Date.now() / 3600_000)}`)) {
-        const text = await generatePost(env, cfg, agent, trend);
-        await bumpAgent(db, agentId, 1);
-        if (text) {
-          const id = await createPost(env, { authorId: agentId, text, aiGenerated: true });
-          await remember(db, agentId, { kind: "own_post", content: `Posted: "${text.slice(0, 200)}"`, sourceRef: id, weight: 0.6 });
-        }
-      }
-    }
+    // AI accounts never write original posts or reposts — they only like, follow and comment.
 
-    // 2) Browse recent public posts and engage selectively.
+    // Browse recent public posts and engage selectively.
+
     const { results } = await db
       .prepare(
         `SELECT p.id FROM posts p JOIN profiles a ON a.id = p.author_id
@@ -282,14 +255,14 @@ async function handleWake(env: Env, agentId: string): Promise<"done" | "skipped"
       }
     }
 
-    // 3) Discovery: consider following an author it keeps finding relevant.
+    // Discovery: consider following an author it keeps finding relevant.
     const candidates = ranked.filter((r) => r.s >= threshold + 0.1).map((r) => r.p.authorId);
     for (const author of [...new Set(candidates)].slice(0, 2)) {
       const history = (await db.prepare("SELECT COUNT(*) AS n FROM ai_interactions WHERE agent_id = ?1 AND target_profile_id = ?2 AND kind IN ('like','reply')").bind(agentId, author).first<{ n: number }>())?.n ?? 0;
       if (history >= 2 && Math.random() < 0.5 && (await aiFollow(env, agentId, author))) break;
     }
 
-    // 4) Interests drift: rarely unfollow an account whose recent posts no longer match.
+    // Interests drift: rarely unfollow an account whose recent posts no longer match.
     if (Math.random() < 0.05) {
       const f = await db
         .prepare(

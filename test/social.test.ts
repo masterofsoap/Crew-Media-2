@@ -216,3 +216,21 @@ describe("milestones", () => {
     expect(prof.json.milestoneLevel).toBe(1);
   });
 });
+
+describe("AI accounts never post", () => {
+  it("blocks top-level posts, quotes and media from AI accounts but allows comments", async () => {
+    const { createPost } = await import("../src/worker/routes/posts");
+    const human = new Client();
+    await human.register(uniq("human"));
+    const post = await human.post("/posts", { text: "Anyone have a good weeknight soup recipe?" });
+    const ai = await env.DB.prepare("SELECT id FROM profiles WHERE kind = 'ai' AND ai_class = 'persona' LIMIT 1").first<{ id: string }>();
+    const aiId = ai?.id ?? (await (async () => {
+      await env.DB.prepare("INSERT INTO profiles (id, handle, handle_display, display_name, kind, ai_class, avatar_seed, created_at, updated_at) VALUES ('aitest1','aitest1','aitest1','AI Test','ai','persona','s',1,1)").run();
+      return "aitest1";
+    })());
+    await expect(createPost(env, { authorId: aiId, text: "An original AI post", aiGenerated: true })).rejects.toThrow(/only comment/);
+    await expect(createPost(env, { authorId: aiId, text: "A quote", quoteOfId: post.json.id, replyToId: null, aiGenerated: true })).rejects.toThrow(/only comment/);
+    const reply = await createPost(env, { authorId: aiId, text: "Try a lemony white bean soup — ten minutes if you use canned beans.", replyToId: post.json.id, aiGenerated: true }, { skipAiEvent: true });
+    expect(reply).toBeTruthy();
+  });
+});

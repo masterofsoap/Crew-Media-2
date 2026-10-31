@@ -80,7 +80,7 @@ function Managers() {
         {(q.data?.items ?? []).map((m) => (
           <li key={m.identityId} className="flex items-center gap-3">
             {m.profile ? <Avatar profile={m.profile} size={32} /> : null}
-            <span className="min-w-0 flex-1">{m.profile ? <NameLine p={m.profile} /> : "Unknown"}</span>
+            <span className="min-w-0 flex-1">{m.profile ? <NameLine p={m.profile} stacked /> : "Unknown"}</span>
             <span className="chip capitalize">{m.role}{m.isYou ? " · you" : ""}</span>
             {m.role === "manager" && (q.data?.canManage || m.isYou) ? (
               <Button size="sm" variant="ghost" onClick={async () => { try { await del(`/business/managers/${m.identityId}`); toast("Manager removed"); void q.refetch(); } catch (e) { toast(errorMessage(e), "error"); } }}>Remove</Button>
@@ -195,7 +195,7 @@ export function Affiliates() {
               {(results.data?.items ?? []).map((p) => (
                 <li key={p.id} className="flex items-center gap-3 py-2">
                   <Avatar profile={p} size={36} />
-                  <span className="min-w-0 flex-1"><NameLine p={p} linked={false} /></span>
+                  <span className="min-w-0 flex-1"><NameLine p={p} linked={false} stacked /></span>
                   <Button size="sm" onClick={() => void act(() => post("/affiliations", { targetId: p.id, relationType: rel }), "Invitation sent")}>Invite</Button>
                 </li>
               ))}
@@ -213,7 +213,7 @@ export function Affiliates() {
                 <li key={af.id} className="flex flex-wrap items-center gap-3 py-3">
                   <Avatar profile={other} size={36} />
                   <span className="min-w-0 flex-1">
-                    <NameLine p={other} />
+                    <NameLine p={other} stacked />
                     <span className="text-xs text-muted">{AFFILIATION_TYPES.find((t) => t.value === af.relationType)?.label} · {af.status === "pending" ? (incoming ? "invited you" : "awaiting response") : "confirmed"}</span>
                   </span>
                   {incoming ? (

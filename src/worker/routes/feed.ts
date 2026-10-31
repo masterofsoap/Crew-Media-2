@@ -93,7 +93,7 @@ app.get("/feed/for-you", async (c) => {
               (SELECT COUNT(DISTINCT r.author_id) FROM posts r WHERE r.reply_to_id = p.id AND r.deleted_at IS NULL) AS repliers
        FROM posts p JOIN profiles a ON a.id = p.author_id LEFT JOIN profile_scores s ON s.profile_id = p.author_id
        WHERE p.created_at BETWEEN ?2 AND ?3 AND p.reply_to_id IS NULL AND p.deleted_at IS NULL AND p.moderation_status = 'ok'
-         AND p.author_id <> ?1 AND (a.kind <> 'ai' OR a.ai_class = 'persona') AND ${visibleAuthorSql("a")}
+         AND a.kind IN ('personal','business') AND ${visibleAuthorSql("a")}
        ORDER BY p.created_at DESC LIMIT 400`,
     )
     .bind(v, since, cur.at)
@@ -111,14 +111,14 @@ app.get("/feed/for-you", async (c) => {
       id: r.id, authorId: r.author_id, authorIsAi: r.kind === "ai", createdAt: r.created_at, quality: r.quality_score,
       topics: r.topics.split(",").filter(Boolean), hashtags: (r.tags ?? "").split(",").filter(Boolean),
       likeCount: r.like_count, replyCount: r.reply_count, repostCount: r.repost_count, distinctRepliers: r.repliers,
-      authorConsistency: r.consistency ?? 0, authorVisibility: r.visibility, followed: !!r.followed,
+      authorConsistency: r.consistency ?? 0, authorVisibility: r.visibility, followed: !!r.followed || r.author_id === v,
       interactedWithAuthor: interMap.get(r.author_id) ?? 0, hasMedia: !!r.has_media,
     };
     return { c: cand, score: scoreCandidate(cand, { interests }, cfg.ranking, cur.at) };
   });
   const ranked = diversify(scored, cur.off + PAGE);
   const page = ranked.slice(cur.off, cur.off + PAGE);
-  const reasons = (x: (typeof page)[number]) => (x.c.followed ? "Following" : x.c.topics[0] ? `Because you like ${TOPICS.find((t) => t.slug === x.c.topics[0])?.label ?? x.c.topics[0]}` : "Popular in the community");
+  const reasons = (x: (typeof page)[number]) => (x.c.authorId === v ? "Your post" : x.c.followed ? "Following" : x.c.topics[0] ? `Because you like ${TOPICS.find((t) => t.slug === x.c.topics[0])?.label ?? x.c.topics[0]}` : "Popular in the community");
   const items = await toFeedItems(db, v, page.map((x) => ({ postId: x.c.id, reason: reasons(x) })));
   const more = ranked.length === cur.off + PAGE && results.length > cur.off + PAGE;
   return c.json({ items, cursor: more ? encodeCursor({ at: cur.at, off: cur.off + PAGE }) : null });

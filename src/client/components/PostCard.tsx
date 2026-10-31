@@ -168,7 +168,7 @@ export function PostCard({ item, post: postProp, focus = false, hideThreadLine =
           <div className="flex items-start gap-1">
             <div className="min-w-0 flex-1">
               <div className="flex min-w-0 items-center gap-1">
-                <NameLine p={p.author} />
+                <NameLine p={p.author} stacked={focus} handle="wide" />
                 {!focus ? (
                   <span className="shrink-0 text-sm text-muted" title={fullDate(p.createdAt)}>
                     · {timeAgo(p.createdAt)}

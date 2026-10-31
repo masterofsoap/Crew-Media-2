@@ -223,20 +223,24 @@ export function ProfileCanvas({
   const header = (
     <div className={`pc-card ${outlineClass} overflow-hidden`} data-shape={shapeAttr}>
       <Banner a={a} url={profile.bannerUrl} />
-      <div className={`relative ${DENSITY[L.density]} flex flex-col ${centered ? "items-center text-center" : ""} ${L.variant === "split" ? "sm:flex-row sm:items-end sm:text-left" : ""}`}>
-        <div className={`${centered ? "-mt-20" : "-mt-16"} relative shrink-0`} style={{ width: avatarPx, height: avatarPx }}>
-          <span className={`block avatar-${a.avatar.shape}`} style={{ ...ring, width: avatarPx, height: avatarPx, background: a.avatar.ring === "gradient" ? (ring as CSSProperties).background : undefined }}>
-            <Avatar profile={profile} size={a.avatar.ring === "gradient" ? avatarPx - 8 : avatarPx} shape={a.avatar.shape} />
-          </span>
-          {a.accentIcon.icon !== "none" && a.accentIcon.placement === "corner" ? (
-            <span className="absolute -bottom-1 -right-1 grid h-9 w-9 place-items-center rounded-full bg-accent text-on-accent shadow">
-              <Icon name={a.accentIcon.icon} size={18} />
+      <div className={`relative ${DENSITY[L.density]} flex flex-col ${centered ? "items-center text-center" : ""}`}>
+        {/* Avatar and actions share a row that wraps, so buttons never sit on top of the avatar. */}
+        <div className={`flex w-full flex-wrap items-end gap-3 ${centered ? "flex-col items-center" : "justify-between"}`}>
+          <div className={`${centered ? "-mt-20" : "-mt-16"} relative aspect-square shrink-0`} style={{ width: `min(${avatarPx}px, 30vw)`, minWidth: 64 }}>
+            <span className={`block h-full w-full avatar-${a.avatar.shape}`} style={{ ...ring, background: a.avatar.ring === "gradient" ? (ring as CSSProperties).background : undefined }}>
+              <Avatar profile={profile} size={avatarPx} shape={a.avatar.shape} className="!h-full !w-full [&_svg]:h-full [&_svg]:w-full" />
             </span>
-          ) : null}
+            {a.accentIcon.icon !== "none" && a.accentIcon.placement === "corner" ? (
+              <span className="absolute -bottom-1 -right-1 grid h-9 w-9 place-items-center rounded-full bg-accent text-on-accent shadow">
+                <Icon name={a.accentIcon.icon} size={18} />
+              </span>
+            ) : null}
+          </div>
+          {actions ? <div className={`flex flex-wrap items-center gap-2 ${centered ? "justify-center" : "ml-auto justify-end"}`}>{actions}</div> : null}
         </div>
-        <div className={`min-w-0 flex-1 space-y-2 ${L.variant === "split" ? "sm:pb-1" : ""}`}>
+        <div className="mt-3 w-full min-w-0 space-y-2">
           <div className={`flex flex-wrap items-center gap-2 ${centered ? "justify-center" : ""}`}>
-            <h1 className={`break-words ${nameClass}`} style={nameStyle}>
+            <h1 className={`min-w-0 [overflow-wrap:anywhere] ${nameClass}`} style={nameStyle}>
               {profile.displayName}
             </h1>
             {accent}
@@ -254,7 +258,6 @@ export function ProfileCanvas({
             </div>
           ) : null}
         </div>
-        {actions ? <div className={`flex shrink-0 flex-wrap gap-2 ${centered ? "justify-center" : "sm:self-start"} ${L.variant === "split" ? "" : "absolute right-4 top-3"}`}>{actions}</div> : null}
       </div>
       <div className={`space-y-3 px-4 pb-4 ${centered ? "text-center" : ""}`}>
         {profile.bio ? (
@@ -270,8 +273,8 @@ export function ProfileCanvas({
           {profile.business ? <span className="flex items-center gap-1"><Icon name="briefcase" size={15} /> {profile.business.category}</span> : null}
           {profile.location ? <span className="flex items-center gap-1"><Icon name="location" size={15} /> {profile.location}</span> : null}
           {profile.website ? (
-            <a href={profile.website} target="_blank" rel="noopener noreferrer nofollow ugc" className="flex items-center gap-1 text-accent hover:underline">
-              <Icon name="link" size={15} /> {profile.website.replace(/^https?:\/\//, "").replace(/\/$/, "")}
+            <a href={profile.website} target="_blank" rel="noopener noreferrer nofollow ugc" className="flex min-w-0 max-w-full items-center gap-1 text-accent hover:underline">
+              <Icon name="link" size={15} className="shrink-0" /> <span className="truncate">{profile.website.replace(/^https?:\/\//, "").replace(/\/$/, "")}</span>
             </a>
           ) : null}
           <span className="flex items-center gap-1"><Icon name="calendar" size={15} /> Joined {monthYear(profile.createdAt)}</span>

@@ -1,5 +1,4 @@
 import { inferTopics } from "../../shared/text";
-import { POST_MAX_CHARS } from "../../shared/constants";
 import { newId, dayKey } from "../lib/ids";
 import { getConfig, visibilityMultiplier, type Config } from "../lib/settings";
 import { isGenericComment, similarity } from "../lib/quality";
@@ -214,28 +213,6 @@ export async function generateReply(env: Env, cfg: Config, agent: Agent, post: P
   const text = cleanOutput(r.text, agent, 280);
   if (!text || isGenericComment(text)) return null;
   if (mine.some((m) => similarity(m, text) > 0.55)) return null;
-  if (!(await isSafe(env, text, cfg))) return null;
-  return text;
-}
-
-export async function generatePost(env: Env, cfg: Config, agent: Agent, trend: string | null): Promise<string | null> {
-  const mine = await ownRecent(env.DB, agent.id, "post", 8);
-  const prefs = await recall(env.DB, agent.id, null, "public", { limit: 4, charBudget: 500 });
-  const now = new Date();
-  const user = [
-    `Today is ${now.toUTCString().slice(0, 16)}.`,
-    `Write one original post for your followers about something within your interests (${agent.interests.join(", ")}).`,
-    trend ? `The community is currently discussing #${trend}. Only mention it if it genuinely fits your interests.` : "",
-    mine.length ? `Your recent posts (pick a different angle; don't repeat ideas, openings or structure):\n${mine.map((m) => `- ${m}`).join("\n")}` : "",
-    prefs.length ? `Things you've established about yourself:\n${prefs.join("\n")}` : "",
-    "Keep it under 260 characters. Make it specific and human-scaled: a tip, a small observation, a question for followers, or a tiny story framed as your persona's perspective. Output only the post text.",
-  ]
-    .filter(Boolean)
-    .join("\n\n");
-  const r = await chat(env, "dialogue", [{ role: "system", content: systemPrompt(agent) }, { role: "user", content: user }], { maxTokens: 140, temperature: 0.95 });
-  const text = cleanOutput(r.text, agent, Math.min(POST_MAX_CHARS, 300));
-  if (!text || text.length < 25) return null;
-  if (mine.some((m) => similarity(m, text) > 0.5)) return null;
   if (!(await isSafe(env, text, cfg))) return null;
   return text;
 }
